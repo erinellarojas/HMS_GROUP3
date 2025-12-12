@@ -239,43 +239,70 @@ $(document).ready(function() {
         // Disable button to prevent double-clicks
         button.prop('disabled', true).text('Marking...');
         
-        $.post('<?= site_url('notifications/mark_read') ?>/' + notificationId)
-            .done(function(response) {
+        // Prepare CSRF token for the request
+        const csrfTokenName = '<?= csrf_token() ?>';
+        const csrfTokenValue = '<?= csrf_hash() ?>';
+        
+        // Make AJAX POST request with CSRF token
+        $.ajax({
+            url: '<?= site_url('notifications/mark_read') ?>/' + notificationId,
+            type: 'POST',
+            data: {
+                [csrfTokenName]: csrfTokenValue
+            },
+            dataType: 'json',
+            success: function(response) {
                 // SUCCESS: Notification marked as read
                 if (response.status === 'success') {
                     // 1. Update badge count immediately (both desktop and mobile)
                     updateNotificationBadge(response.unread_count);
                     
-                    // 2. Smoothly remove notification from BOTH lists (desktop and mobile)
+                    // 2. Update the notification item to show as read (change styling)
                     const notificationItems = $('li.notification-item[data-notification-id="' + notificationId + '"]');
+                    notificationItems.find('.alert').removeClass('alert-info').addClass('alert-secondary');
+                    notificationItems.find('.mark-read-btn').remove();
                     
-                    // Smooth fade-out animation (500ms for smooth, elegant disappearance)
-                    notificationItems.fadeOut(500, function() {
-                        $(this).remove();
-                        
-                        // Show empty message if no notifications remain (with smooth fade-in)
-                        if ($('#notificationList').find('li.notification-item').length === 0) {
-                            $('#notificationEmpty').fadeIn(300);
-                        }
-                        if ($('#notificationListMobile').find('li.notification-item').length === 0) {
-                            $('#notificationEmptyMobile').fadeIn(300);
-                        }
-                    });
+                    // 3. Smoothly fade out the notification after a brief delay
+                    setTimeout(function() {
+                        notificationItems.fadeOut(500, function() {
+                            $(this).remove();
+                            
+                            // Show empty message if no notifications remain (with smooth fade-in)
+                            if ($('#notificationList').find('li.notification-item').length === 0) {
+                                $('#notificationEmpty').fadeIn(300);
+                            }
+                            if ($('#notificationListMobile').find('li.notification-item').length === 0) {
+                                $('#notificationEmptyMobile').fadeIn(300);
+                            }
+                        });
+                    }, 500);
                     
                     // No error message on success - everything worked perfectly
                 } else {
                     // ERROR: Only show error message if something FAILED
                     console.error('Error marking notification as read:', response.message);
-                    alert('Error: ' + response.message);
+                    alert('Error: ' + (response.message || 'Unknown error occurred'));
                     button.prop('disabled', false).text('Mark as Read');
                 }
-            })
-            .fail(function(xhr, status, error) {
+            },
+            error: function(xhr, status, error) {
                 // ERROR: Only show error message if request FAILED
                 console.error('Failed to mark notification as read:', error);
-                alert('Failed to mark notification as read. Please try again.');
+                console.error('Response:', xhr.responseText);
+                
+                let errorMessage = 'Failed to mark notification as read. Please try again.';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.status === 403) {
+                    errorMessage = 'Access denied. Please refresh the page and try again.';
+                } else if (xhr.status === 401) {
+                    errorMessage = 'Session expired. Please log in again.';
+                }
+                
+                alert(errorMessage);
                 button.prop('disabled', false).text('Mark as Read');
-            });
+            }
+        });
     });
 
     // Fetch notifications on page load

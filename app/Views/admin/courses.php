@@ -142,6 +142,18 @@
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
+                                <!-- No results message row (hidden by default) -->
+                                <tr id="noResultsRow" class="hidden">
+                                    <td colspan="4" class="py-12 text-center">
+                                        <div class="flex flex-col items-center justify-center">
+                                            <svg class="w-16 h-16 mx-auto text-white/50 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <p class="text-white/70 text-lg font-semibold">No courses found matching your search.</p>
+                                            <p class="text-white/50 text-sm mt-2">Try a different search term or clear the search to see all courses.</p>
+                                        </div>
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -168,6 +180,11 @@
                 let visibleCount = 0;
                 
                 $('.course-row').each(function() {
+                    // Skip the no results row
+                    if ($(this).attr('id') === 'noResultsRow') {
+                        return;
+                    }
+                    
                     const courseName = $(this).data('course-name') || '';
                     const courseCode = $(this).data('course-code') || '';
                     const description = $(this).data('description') || '';
@@ -185,6 +202,13 @@
                         $(this).hide();
                     }
                 });
+                
+                // Show/hide no results message
+                if (searchTerm !== '' && visibleCount === 0) {
+                    $('#noResultsRow').removeClass('hidden');
+                } else {
+                    $('#noResultsRow').addClass('hidden');
+                }
                 
                 // Update results info
                 updateResultsInfo(visibleCount, searchTerm, false);
@@ -236,7 +260,19 @@
                 tbody.empty();
                 
                 if (results.length === 0) {
-                    tbody.html('<tr><td colspan="4" class="py-8 text-center text-white/70">No courses found matching your search.</td></tr>');
+                    tbody.html(`
+                        <tr>
+                            <td colspan="4" class="py-12 text-center">
+                                <div class="flex flex-col items-center justify-center">
+                                    <svg class="w-16 h-16 mx-auto text-white/50 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <p class="text-white/70 text-lg font-semibold">No courses found matching your search.</p>
+                                    <p class="text-white/50 text-sm mt-2">Try a different search term or clear the search to see all courses.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `);
                     return;
                 }
                 
@@ -302,6 +338,7 @@
                 $('#searchInput').val('');
                 filterCoursesClientSide('');
                 $('#searchResultsInfo').addClass('hidden');
+                $('#noResultsRow').addClass('hidden');
                 
                 // Reload page to show all courses
                 window.location.href = '<?= site_url('admin/courses') ?>';
