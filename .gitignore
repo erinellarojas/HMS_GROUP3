@@ -1,0 +1,6 @@
+writable/debugbar/
+writable/session/
+writable/logs/
+
+*.ps1
+*.md
